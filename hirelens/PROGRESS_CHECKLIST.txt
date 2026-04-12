@@ -1,0 +1,236 @@
+================================================================================
+                HireLens - PROGRESS CHECKLIST
+================================================================================
+
+Last Updated: 2026-04-12
+
+================================================================================
+BACKEND
+================================================================================
+
+[x] FastAPI app setup (main.py)
+    - Health check endpoint
+    - CORS middleware configured
+    - All 5 API routes implemented
+
+[x] Bias Detection Engine (bias.py)
+    - CSV parsing with pandas
+    - Per-group selection rate calculation
+    - Disparate impact computation
+    - 4/5ths rule bias flag
+    - Threshold-based binarization for continuous scores
+    - Column info extraction for upload response
+
+[x] Gemini AI Integration (gemini.py)
+    - Structured prompt with bias results
+    - Gemini 2.0 Flash API call
+    - JSON response parsing (handles markdown code blocks)
+    - Error handling and fallback messages
+    - Environment variable for API key
+
+[x] API Endpoints
+    - POST /api/upload     - CSV upload + column discovery
+    - POST /api/analyze    - Run bias analysis
+    - POST /api/explain    - Get AI explanation
+    - POST /api/simulate   - What-if threshold simulation
+    - GET  /api/report     - Generate JSON report
+
+[x] Requirements & Config
+    - requirements.txt with all dependencies
+    - .env.example template
+    - Sample CSV dataset (50 rows, gender bias scenario)
+
+================================================================================
+FRONTEND
+================================================================================
+
+[x] Project Setup
+    - Next.js 16 with App Router
+    - Tailwind CSS 4
+    - Axios + Recharts installed
+    - TypeScript configured
+
+[x] Global Theme & Layout
+    - CSS variables for light/dark mode
+    - Custom color tokens (accent, muted, card, danger, success, warning)
+    - Root layout with Navbar
+    - Responsive design
+
+[x] Navbar Component
+    - Logo + navigation links
+    - Active route highlighting
+    - Mobile hamburger menu (details/summary)
+    - Sticky + backdrop blur
+
+[x] Landing Page (/)
+    - Hero section with gradient background
+    - "Powered by Gemini AI" badge
+    - 4 feature cards with icons
+    - CTA section
+    - Footer
+
+[x] Upload Page (/upload)
+    - Drag-and-drop file upload zone
+    - File type validation (CSV only)
+    - Column discovery after upload
+    - Target column selector
+    - Protected attribute selector
+    - Error handling & loading states
+    - Two-step flow (upload → configure)
+
+[x] Dashboard (/dashboard)
+    - Bias detected/not-detected indicator card
+    - Disparate Impact score with progress bar
+    - Group breakdown card (rates + counts)
+    - Recharts bar chart (selection rates)
+    - Download Report button (JSON)
+    - Quick action links to Insights, Fixes, Simulator
+    - Empty state when no data
+
+[x] Insights Page (/insights)
+    - Generate button to trigger Gemini API
+    - Loading spinner during API call
+    - Explanation card
+    - Reasoning card
+    - Suggestions card
+    - Regenerate button
+    - Error handling
+
+[x] Fix Suggestions Page (/fixes)
+    - AI-generated recommendations (from Gemini)
+    - 6 default best-practice cards with impact levels
+    - Generate AI button if no prior analysis
+    - Navigation to simulator
+
+[x] What-If Simulator (/simulator)
+    - Range slider for threshold (0.00 - 1.00)
+    - Simulate button → backend API call
+    - Updated DI score display
+    - Change from original comparison
+    - Recharts bar chart with new rates
+    - Detailed table breakdown
+    - Empty state when no data
+
+[x] Report Generation
+    - Download JSON report from dashboard
+    - Report includes: bias results, AI explanation, metadata
+
+[x] API Client (lib/api.ts)
+    - Typed interfaces for all API responses
+    - uploadCSV, analyzeBias, getExplanation, simulateThreshold, getReport
+    - Configurable BACKEND_URL via env
+
+================================================================================
+CONFIGURATION & DEPLOYMENT
+================================================================================
+
+[x] Environment Variables
+    - .env.example (frontend)
+    - .env.local (frontend, local dev)
+    - backend/.env.example
+
+[x] Implementation Plan (IMPLEMENTATION_PLAN.txt)
+    - Architecture overview
+    - Folder structure
+    - Core algorithms
+    - Setup instructions
+    - Deployment guides (Vercel, Cloud Run, Render)
+
+[x] Progress Checklist (this file)
+
+================================================================================
+PHASE 2 ENHANCEMENTS (ALL COMPLETED)
+================================================================================
+
+[x] Add Dockerfile for backend
+    - Production Dockerfile with Python 3.11-slim
+    - .dockerignore for clean builds
+    - SQLite volume mount for data persistence
+
+[x] PDF report generation (server-side with reportlab)
+    - Professional PDF with styled tables and metrics
+    - GET /api/report/pdf endpoint
+    - Frontend PDF download button on dashboard
+
+[x] Multiple protected attribute analysis
+    - POST /api/analyze/multi endpoint
+    - Comma-separated protected columns
+    - Per-attribute results with error handling
+
+[x] Historical trend tracking
+    - SQLite database stores all analyses
+    - GET /api/history endpoint (with pagination)
+    - GET /api/history/:id for full detail
+    - /history page to browse and reload past analyses
+
+[x] User authentication
+    - JWT-based auth (register/login)
+    - PBKDF2 password hashing with salt
+    - POST /api/auth/register, /api/auth/login, GET /api/auth/me
+    - Optional auth on analysis (links analyses to users)
+    - Frontend auth token in localStorage + axios interceptor
+
+[x] Database persistence (SQLite)
+    - database.py with users + analyses tables
+    - Auto-init on startup via lifespan
+    - Foreign key linking analyses to users
+    - Configurable DB path via DATABASE_PATH env var
+
+[x] CSV validation
+    - validate_csv() in bias.py
+    - Checks: empty data, missing columns, non-numeric target,
+      single group, same column, missing values, small groups
+    - Returns warnings (non-fatal) and raises CSVValidationError (fatal)
+    - Warnings displayed on dashboard
+
+[x] Unit tests (pytest)
+    - tests/test_bias.py: 9 tests for bias engine + validation
+    - tests/test_auth.py: 5 tests for password hashing + JWT
+    - tests/test_api.py: 18 tests for all API endpoints
+    - conftest.py with fixtures and temp DB cleanup
+
+[x] E2E tests (Playwright)
+    - e2e/landing.spec.ts: hero, nav, features
+    - e2e/upload.spec.ts: upload form, empty states, navigation
+    - playwright.config.ts with chromium + dev server
+
+[x] CI/CD pipeline (GitHub Actions)
+    - .github/workflows/ci.yml
+    - Backend tests (Python 3.11 + pytest)
+    - Frontend build (Node 20 + next build)
+    - E2E tests (Playwright + chromium)
+    - Artifact upload for Playwright reports
+
+[x] Rate limiting on API
+    - slowapi integration with per-IP limits
+    - /api/auth/register: 5/min
+    - /api/auth/login: 10/min
+    - /api/upload: 20/min
+    - /api/analyze: 30/min
+    - /api/explain: 10/min (Gemini API costs)
+    - Custom 429 error handler
+
+[x] File size limit on upload
+    - 10 MB max enforced in /api/upload
+    - Returns 413 with clear error message
+
+================================================================================
+HOW TO RUN LOCALLY
+================================================================================
+
+Terminal 1 (Backend):
+  cd backend
+  python -m venv venv && venv\Scripts\activate
+  pip install -r requirements.txt
+  set GEMINI_API_KEY=your_key_here
+  uvicorn main:app --reload --port 8000
+
+Terminal 2 (Frontend):
+  npm run dev
+
+Open http://localhost:3000 in your browser.
+Use backend/sample_hiring_data.csv as test data.
+  - Target column: "hired"
+  - Protected attribute: "gender"
+
+================================================================================

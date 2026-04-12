@@ -1,0 +1,166 @@
+================================================================================
+                    HireLens - IMPLEMENTATION PLAN
+================================================================================
+
+PROJECT: HireLens - AI-Powered Hiring Bias Detection & Mitigation
+TECH STACK: Next.js 16 + Tailwind CSS + Recharts | FastAPI + Pandas | Gemini AI
+DATE: 2026-04-12
+
+================================================================================
+                         ARCHITECTURE OVERVIEW
+================================================================================
+
+Frontend (Next.js App Router)
+  |
+  |--> /                  Landing page (hero, features, CTA)
+  |--> /upload            CSV upload + column selection
+  |--> /dashboard         Bias metrics, charts, report download
+  |--> /insights          AI-generated explanation from Gemini
+  |--> /fixes             Suggested mitigations (AI + best practices)
+  |--> /simulator         What-if threshold adjustment tool
+  |
+  |--> Axios API calls to:
+       |
+       Backend (FastAPI @ localhost:8000)
+         |
+         |--> POST /api/upload      Upload CSV, return column info
+         |--> POST /api/analyze     Compute bias (disparate impact)
+         |--> POST /api/explain     Get Gemini AI explanation
+         |--> POST /api/simulate    Re-run with different threshold
+         |--> GET  /api/report      Generate downloadable JSON report
+
+================================================================================
+                         FOLDER STRUCTURE
+================================================================================
+
+hirelens/
+├── app/
+│   ├── components/
+│   │   ├── Navbar.tsx           Navigation bar (responsive + mobile menu)
+│   │   └── BiasChart.tsx        Recharts bar chart for selection rates
+│   ├── dashboard/
+│   │   └── page.tsx             Dashboard with metrics, chart, actions
+│   ├── fixes/
+│   │   └── page.tsx             Fix suggestions (AI + defaults)
+│   ├── insights/
+│   │   └── page.tsx             Gemini AI explanation display
+│   ├── simulator/
+│   │   └── page.tsx             What-if threshold slider
+│   ├── upload/
+│   │   └── page.tsx             CSV upload form + column config
+│   ├── globals.css              Theme (light/dark, CSS variables)
+│   ├── layout.tsx               Root layout with Navbar
+│   └── page.tsx                 Landing page
+├── backend/
+│   ├── main.py                  FastAPI app (routes, CORS)
+│   ├── bias.py                  Bias detection engine
+│   ├── gemini.py                Gemini API integration
+│   ├── requirements.txt         Python dependencies
+│   ├── sample_hiring_data.csv   50-row test dataset
+│   └── .env.example             Backend env template
+├── lib/
+│   └── api.ts                   Axios client + typed API functions
+├── .env.example                 Frontend env template
+├── .env.local                   Local frontend env (BACKEND_URL)
+├── package.json                 Node dependencies
+├── next.config.ts               Next.js configuration
+├── tsconfig.json                TypeScript config
+└── tailwind/postcss configs     CSS tooling
+
+================================================================================
+                         CORE ALGORITHMS
+================================================================================
+
+BIAS DETECTION (bias.py):
+  1. Load CSV into pandas DataFrame
+  2. Binarize target column if continuous (using threshold)
+  3. For each group in protected column:
+     - Calculate selection_rate = hired / total
+  4. Disparate Impact = min(rate) / max(rate)
+  5. bias_detected = DI < 0.8 (EEOC 4/5ths rule)
+
+GEMINI INTEGRATION (gemini.py):
+  1. Format bias results as structured prompt
+  2. POST to Gemini 2.0 Flash API
+  3. Parse JSON response for explanation, reasoning, suggestions
+  4. Fallback to error messages if API unavailable
+
+DATA FLOW:
+  Upload CSV → Parse columns → User selects target + protected →
+  Compute bias → Display dashboard → Request AI insights →
+  Adjust threshold in simulator → Download report
+
+================================================================================
+                         SETUP INSTRUCTIONS
+================================================================================
+
+PREREQUISITES:
+  - Node.js 18+ and npm
+  - Python 3.10+
+  - Gemini API key (from Google AI Studio)
+
+BACKEND SETUP:
+  cd backend
+  python -m venv venv
+  venv\Scripts\activate        (Windows)
+  # source venv/bin/activate   (Mac/Linux)
+  pip install -r requirements.txt
+
+  # Create .env file with your Gemini key:
+  echo GEMINI_API_KEY=your_key_here > .env
+
+  # Run the server:
+  uvicorn main:app --reload --port 8000
+
+FRONTEND SETUP:
+  cd hirelens   (project root)
+  npm install
+  npm run dev
+
+  # Open http://localhost:3000
+
+================================================================================
+                         DEPLOYMENT
+================================================================================
+
+FRONTEND → VERCEL:
+  1. Push code to GitHub
+  2. Import project on vercel.com
+  3. Set environment variable: NEXT_PUBLIC_BACKEND_URL = <your-backend-url>
+  4. Deploy (auto-detected as Next.js)
+
+BACKEND → GOOGLE CLOUD RUN:
+  1. Create Dockerfile:
+     FROM python:3.11-slim
+     WORKDIR /app
+     COPY requirements.txt .
+     RUN pip install -r requirements.txt
+     COPY . .
+     CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+
+  2. Build and deploy:
+     gcloud builds submit --tag gcr.io/PROJECT_ID/fairhire-api
+     gcloud run deploy fairhire-api \
+       --image gcr.io/PROJECT_ID/fairhire-api \
+       --platform managed \
+       --allow-unauthenticated \
+       --set-env-vars GEMINI_API_KEY=your_key
+
+BACKEND → RENDER (alternative):
+  1. Create a new Web Service on render.com
+  2. Connect your GitHub repo, set root to /backend
+  3. Build command: pip install -r requirements.txt
+  4. Start command: uvicorn main:app --host 0.0.0.0 --port $PORT
+  5. Add env var: GEMINI_API_KEY
+
+================================================================================
+                         ENV VARIABLES
+================================================================================
+
+FRONTEND (.env.local):
+  NEXT_PUBLIC_BACKEND_URL    Backend API URL (default: http://localhost:8000)
+
+BACKEND (.env):
+  GEMINI_API_KEY             Google Gemini API key
+
+================================================================================
