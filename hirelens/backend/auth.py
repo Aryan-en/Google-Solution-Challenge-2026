@@ -10,7 +10,16 @@ import base64
 
 from fastapi import HTTPException, Request
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "hirelens-dev-secret-change-in-production")
+_ENVIRONMENT = os.getenv("APP_ENV", "development").lower()
+_JWT_SECRET = os.getenv("JWT_SECRET_KEY")
+
+if _JWT_SECRET:
+    SECRET_KEY = _JWT_SECRET
+elif _ENVIRONMENT == "development":
+    SECRET_KEY = "hirelens-dev-secret-change-in-production"
+else:
+    raise RuntimeError("JWT_SECRET_KEY must be set outside development.")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 

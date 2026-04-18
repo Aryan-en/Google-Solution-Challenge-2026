@@ -14,7 +14,9 @@ export default function InsightsPage() {
     setLoading(true);
     setError("");
     try {
-      const result = await getExplanation();
+      const stored = sessionStorage.getItem("biasResults");
+      const analysisId = stored ? JSON.parse(stored).analysis_id : undefined;
+      const result = await getExplanation(analysisId);
       setExplanation(result);
       sessionStorage.setItem("explanation", JSON.stringify(result));
     } catch {

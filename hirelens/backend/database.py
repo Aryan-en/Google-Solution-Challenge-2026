@@ -32,6 +32,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             filename TEXT NOT NULL,
+            source_csv TEXT,
             target_column TEXT NOT NULL,
             protected_column TEXT NOT NULL,
             threshold REAL NOT NULL DEFAULT 0.5,
@@ -41,6 +42,13 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
     """)
+
+    # Lightweight migration for older DBs created before source_csv existed.
+    columns = conn.execute("PRAGMA table_info(analyses)").fetchall()
+    column_names = {c[1] for c in columns}
+    if "source_csv" not in column_names:
+        conn.execute("ALTER TABLE analyses ADD COLUMN source_csv TEXT")
+
     conn.commit()
     conn.close()
 
@@ -87,6 +95,7 @@ def get_user_by_id(user_id: int) -> dict[str, Any] | None:
 def save_analysis(
     user_id: int | None,
     filename: str,
+    source_csv: str | None,
     target_column: str,
     protected_column: str,
     threshold: float,
@@ -97,11 +106,12 @@ def save_analysis(
     try:
         cursor = conn.execute(
             """INSERT INTO analyses
-               (user_id, filename, target_column, protected_column, threshold, bias_results, explanation)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (user_id, filename, source_csv, target_column, protected_column, threshold, bias_results, explanation)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 user_id,
                 filename,
+                source_csv,
                 target_column,
                 protected_column,
                 threshold,
@@ -167,5 +177,20 @@ def get_history(user_id: int | None = None, limit: int = 50) -> list[dict[str, A
                 d["explanation"] = json.loads(d["explanation"])
             results.append(d)
         return results
+    finally:
+        conn.close()
+
+
+def get_latest_analysis_id_for_user(user_id: int) -> int | None:
+    """Get the most recently created analysis ID for a user."""
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT id FROM analyses WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            return None
+        return int(row["id"])
     finally:
         conn.close()

@@ -24,10 +24,16 @@ export default function SimulatorPage() {
   }, []);
 
   const handleSimulate = async () => {
+    const analysisId = originalResults?.analysis_id;
+    if (!analysisId) {
+      setError("Missing analysis reference. Please run analysis again.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
-      const result = await simulateThreshold(threshold);
+      const result = await simulateThreshold(threshold, analysisId);
       setResults(result);
     } catch {
       setError("Simulation failed. Make sure you have uploaded data and run analysis.");

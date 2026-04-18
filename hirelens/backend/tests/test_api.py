@@ -5,6 +5,15 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
+def auth_headers(client, username: str) -> dict[str, str]:
+    reg = client.post(
+        "/api/auth/register",
+        data={"username": username, "password": "password123"},
+    )
+    token = reg.json()["token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 class TestHealthCheck:
     def test_health(self, client):
         response = client.get("/")
@@ -24,6 +33,7 @@ class TestUpload:
         data = response.json()
         assert data["row_count"] == 20
         assert len(data["columns"]) > 0
+        assert data["upload_id"]
 
     def test_upload_non_csv(self, client):
         response = client.post(
@@ -223,37 +233,66 @@ class TestAuth:
 
 class TestHistory:
     def test_history_empty(self, client):
-        response = client.get("/api/history")
+        headers = auth_headers(client, "history_user")
+        response = client.get("/api/history", headers=headers)
         assert response.status_code == 200
         assert response.json()["count"] == 0
 
     def test_history_after_analysis(self, client, sample_csv_bytes):
+        headers = auth_headers(client, "history_user")
         client.post(
             "/api/upload",
             files={"file": ("test.csv", io.BytesIO(sample_csv_bytes), "text/csv")},
+            headers=headers,
         )
         client.post(
             "/api/analyze",
             data={"target_column": "hired", "protected_column": "gender"},
+            headers=headers,
         )
-        response = client.get("/api/history")
+        response = client.get("/api/history", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["count"] == 1
         assert data["analyses"][0]["filename"] == "test.csv"
 
     def test_history_detail(self, client, sample_csv_bytes):
+        headers = auth_headers(client, "history_user")
         client.post(
             "/api/upload",
             files={"file": ("test.csv", io.BytesIO(sample_csv_bytes), "text/csv")},
+            headers=headers,
         )
         analyze_resp = client.post(
             "/api/analyze",
             data={"target_column": "hired", "protected_column": "gender"},
+            headers=headers,
         )
         analysis_id = analyze_resp.json()["analysis_id"]
-        response = client.get(f"/api/history/{analysis_id}")
+        response = client.get(f"/api/history/{analysis_id}", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["filename"] == "test.csv"
         assert "bias_results" in data
+
+    def test_history_requires_auth(self, client):
+        response = client.get("/api/history")
+        assert response.status_code == 401
+
+    def test_history_detail_forbidden_for_other_user(self, client, sample_csv_bytes):
+        owner_headers = auth_headers(client, "owner_user")
+        client.post(
+            "/api/upload",
+            files={"file": ("test.csv", io.BytesIO(sample_csv_bytes), "text/csv")},
+            headers=owner_headers,
+        )
+        analyze_resp = client.post(
+            "/api/analyze",
+            data={"target_column": "hired", "protected_column": "gender"},
+            headers=owner_headers,
+        )
+        analysis_id = analyze_resp.json()["analysis_id"]
+
+        other_headers = auth_headers(client, "other_user")
+        response = client.get(f"/api/history/{analysis_id}", headers=other_headers)
+        assert response.status_code == 403

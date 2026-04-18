@@ -19,8 +19,12 @@ export default function DashboardPage() {
   }, []);
 
   const handleDownloadJSON = async () => {
+    if (!results?.analysis_id) {
+      alert("Missing analysis reference. Please re-run analysis.");
+      return;
+    }
     try {
-      const report = await getReport();
+      const report = await getReport(results.analysis_id);
       const blob = new Blob([JSON.stringify(report, null, 2)], {
         type: "application/json",
       });
@@ -36,8 +40,12 @@ export default function DashboardPage() {
   };
 
   const handleDownloadPDF = async () => {
+    if (!results?.analysis_id) {
+      alert("Missing analysis reference. Please re-run analysis.");
+      return;
+    }
     try {
-      const blob = await downloadPdfReport();
+      const blob = await downloadPdfReport(results.analysis_id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

@@ -30,6 +30,7 @@ export interface ColumnInfo {
 export interface UploadResponse {
   columns: ColumnInfo[];
   row_count: number;
+  upload_id: string;
 }
 
 export interface BiasResults {
@@ -154,11 +155,13 @@ export async function uploadCSV(file: File): Promise<UploadResponse> {
 export async function analyzeBias(
   targetColumn: string,
   protectedColumn: string,
+  uploadId: string,
   threshold: number = 0.5
 ): Promise<BiasResults> {
   const formData = new FormData();
   formData.append("target_column", targetColumn);
   formData.append("protected_column", protectedColumn);
+  formData.append("upload_id", uploadId);
   formData.append("threshold", threshold.toString());
   const { data } = await api.post<BiasResults>("/api/analyze", formData);
   return data;
@@ -167,11 +170,13 @@ export async function analyzeBias(
 export async function analyzeBiasMulti(
   targetColumn: string,
   protectedColumns: string[],
+  uploadId: string,
   threshold: number = 0.5
 ): Promise<MultiAttributeResults> {
   const formData = new FormData();
   formData.append("target_column", targetColumn);
   formData.append("protected_columns", protectedColumns.join(","));
+  formData.append("upload_id", uploadId);
   formData.append("threshold", threshold.toString());
   const { data } = await api.post<MultiAttributeResults>(
     "/api/analyze/multi",
@@ -180,28 +185,39 @@ export async function analyzeBiasMulti(
   return data;
 }
 
-export async function getExplanation(): Promise<Explanation> {
-  const { data } = await api.post<Explanation>("/api/explain");
+export async function getExplanation(analysisId?: number): Promise<Explanation> {
+  const formData = new FormData();
+  if (analysisId !== undefined) {
+    formData.append("analysis_id", analysisId.toString());
+  }
+  const { data } = await api.post<Explanation>("/api/explain", formData);
   return data;
 }
 
 export async function simulateThreshold(
-  threshold: number
+  threshold: number,
+  analysisId?: number
 ): Promise<BiasResults> {
   const formData = new FormData();
   formData.append("threshold", threshold.toString());
+  if (analysisId !== undefined) {
+    formData.append("analysis_id", analysisId.toString());
+  }
   const { data } = await api.post<BiasResults>("/api/simulate", formData);
   return data;
 }
 
-export async function getReport(): Promise<Report> {
-  const { data } = await api.get<Report>("/api/report");
+export async function getReport(analysisId?: number): Promise<Report> {
+  const { data } = await api.get<Report>("/api/report", {
+    params: analysisId !== undefined ? { analysis_id: analysisId } : undefined,
+  });
   return data;
 }
 
-export async function downloadPdfReport(): Promise<Blob> {
+export async function downloadPdfReport(analysisId?: number): Promise<Blob> {
   const { data } = await api.get("/api/report/pdf", {
     responseType: "blob",
+    params: analysisId !== undefined ? { analysis_id: analysisId } : undefined,
   });
   return data;
 }

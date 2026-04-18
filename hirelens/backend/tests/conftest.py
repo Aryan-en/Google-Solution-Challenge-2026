@@ -24,6 +24,17 @@ def clean_db():
         os.remove(db_path)
     from database import init_db
     init_db()
+
+    # Clear process-level in-memory stores used by the API between tests.
+    try:
+        import main
+        main.upload_sessions.clear()
+        main.latest_upload_by_actor.clear()
+        main.latest_analysis_by_actor.clear()
+        main.anon_analysis_actor.clear()
+    except Exception:
+        pass
+
     yield
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -33,6 +44,7 @@ def clean_db():
 def client():
     """Create a FastAPI test client."""
     from main import app
+    app.state.limiter.enabled = False
     return TestClient(app)
 
 

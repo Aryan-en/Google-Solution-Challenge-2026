@@ -10,6 +10,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [columns, setColumns] = useState<ColumnInfo[]>([]);
   const [rowCount, setRowCount] = useState(0);
+  const [uploadId, setUploadId] = useState("");
   const [targetCol, setTargetCol] = useState("");
   const [protectedCol, setProtectedCol] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -44,6 +45,7 @@ export default function UploadPage() {
       const result = await uploadCSV(file);
       setColumns(result.columns);
       setRowCount(result.row_count);
+      setUploadId(result.upload_id);
       setStep("configure");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Upload failed";
@@ -62,10 +64,14 @@ export default function UploadPage() {
       setError("Target and protected columns must be different.");
       return;
     }
+    if (!uploadId) {
+      setError("Upload session expired. Please upload the file again.");
+      return;
+    }
     setAnalyzing(true);
     setError("");
     try {
-      const results = await analyzeBias(targetCol, protectedCol);
+      const results = await analyzeBias(targetCol, protectedCol, uploadId);
       // Store results in sessionStorage for dashboard
       sessionStorage.setItem("biasResults", JSON.stringify(results));
       router.push("/dashboard");
@@ -212,6 +218,7 @@ export default function UploadPage() {
                 setStep("upload");
                 setFile(null);
                 setColumns([]);
+                setUploadId("");
               }}
               className="rounded-lg border border-card-border px-4 py-3 text-sm font-medium hover:bg-card"
             >
